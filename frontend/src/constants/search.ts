@@ -13,7 +13,7 @@ export const SEARCH_PAGE_DESCRIPTION = "Browse a curated set of results with qui
 export const SEARCH_PLACEHOLDER = 'Search headphones, consoles, e-readers...';
 export const SEARCH_BUTTON_LABEL = 'Search';
 export const RESULTS_LABEL = 'Results';
-export const SHOWING_ALL_RESULTS_LABEL = 'Showing all available stays';
+export const SHOWING_ALL_RESULTS_LABEL = 'Showing all available products';
 
 export const FILTER_OPTIONS: Array<{ label: string; value: SearchFilter }> = [
   { label: 'Best match', value: 'relevance' },

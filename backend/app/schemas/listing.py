@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class SearchFilter(StrEnum):
@@ -17,6 +17,22 @@ class ListingItemDto(BaseModel):
     link: HttpUrl
 
 
+class SearchQueryDto(BaseModel):
+    search: str | None = Field(default=None, max_length=200)
+    filter: SearchFilter | None = None
+    take: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+    @field_validator("search")
+    @classmethod
+    def normalize_search(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        normalized_value = value.strip()
+        return normalized_value or None
+
+
 class SearchResponseDto(BaseModel):
     items: list[ListingItemDto]
     total: int
@@ -24,4 +40,3 @@ class SearchResponseDto(BaseModel):
     filter: SearchFilter | None = None
     take: int
     offset: int
-

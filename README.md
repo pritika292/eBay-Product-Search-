@@ -2,6 +2,11 @@
 
 This repository contains a React + TypeScript frontend and a FastAPI backend for an Airbnb-style search experience using dummy eBay-style listing data.
 
+## Live Demo
+
+- Frontend: https://ebay-products.onrender.com
+- Backend API: https://ebay-search-service.onrender.com/api/search
+
 ## Structure
 
 - `frontend/` - React + TypeScript + Vite app

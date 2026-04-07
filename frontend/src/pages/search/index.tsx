@@ -259,7 +259,7 @@ const SearchPage = () => {
                 {' '}
                 {data?.total ?? 0}
                 {' '}
-                stays
+                products
               </h2>
             </div>
 
