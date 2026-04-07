@@ -1,99 +1,44 @@
 import type { ListingItem } from '../types/search';
+import {
+  DEFAULT_LISTING_META,
+  LISTING_META_BY_ID,
+} from '../constants/listing';
 
 interface ListingCardProps {
   item: ListingItem;
   position: number;
 }
 
-interface ListingMeta {
-  badge: string;
-  seller: string;
-  condition: string;
-  shipping: string;
-  sellerScore: string;
-  saves: string;
-}
+const StarIcon = () => (
+  <svg
+    aria-hidden="true"
+    className="h-4 w-4 fill-current"
+    viewBox="0 0 20 20"
+  >
+    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.962a1 1 0 0 0 .95.69h4.166c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 0 0-.364 1.118l1.287 3.962c.3.921-.755 1.688-1.539 1.118l-3.37-2.448a1 1 0 0 0-1.176 0l-3.37 2.448c-.783.57-1.838-.197-1.539-1.118l1.287-3.962a1 1 0 0 0-.364-1.118L2.06 9.389c-.783-.57-.38-1.81.588-1.81h4.166a1 1 0 0 0 .95-.69l1.286-3.962Z" />
+  </svg>
+);
 
-const LISTING_META_BY_ID: Record<string, ListingMeta> = {
-  'ebay-101': {
-    badge: 'Trending pick',
-    seller: 'Soundscape Direct',
-    condition: 'Certified refurbished',
-    shipping: 'Free 2-day shipping',
-    sellerScore: '4.92 seller score',
-    saves: '128 watching',
-  },
-  'ebay-102': {
-    badge: 'Collector favorite',
-    seller: 'Pixel Harbor',
-    condition: 'Excellent condition',
-    shipping: 'Ships tomorrow',
-    sellerScore: '4.88 seller score',
-    saves: '96 watching',
-  },
-  'ebay-103': {
-    badge: 'Guest favorite',
-    seller: 'North Peak Audio',
-    condition: 'Brand new',
-    shipping: 'Free returns',
-    sellerScore: '4.97 seller score',
-    saves: '211 watching',
-  },
-  'ebay-104': {
-    badge: 'Quiet luxury pick',
-    seller: 'Paper & Pixel',
-    condition: 'Like new',
-    shipping: 'Free standard shipping',
-    sellerScore: '4.85 seller score',
-    saves: '73 watching',
-  },
-};
+const HeartIcon = () => (
+  <svg
+    aria-hidden="true"
+    className="h-4 w-4 stroke-current"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <path
+      d="M12 21s-6.716-4.344-9.193-8.151C.81 9.764 2.27 5.5 6.172 5.5c2.06 0 3.39 1.064 4.178 2.226C11.137 6.564 12.468 5.5 14.527 5.5c3.902 0 5.363 4.264 3.365 7.349C18.716 16.656 12 21 12 21Z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.7"
+    />
+  </svg>
+);
 
-const DEFAULT_META: ListingMeta = {
-  badge: 'Top pick',
-  seller: 'Verified seller',
-  condition: 'Great condition',
-  shipping: 'Fast shipping',
-  sellerScore: '4.9 seller score',
-  saves: '40 watching',
-};
+const DotIcon = () => <span aria-hidden="true" className="text-slate-300">.</span>;
 
-function StarIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-4 w-4 fill-current"
-      viewBox="0 0 20 20"
-    >
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.962a1 1 0 0 0 .95.69h4.166c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 0 0-.364 1.118l1.287 3.962c.3.921-.755 1.688-1.539 1.118l-3.37-2.448a1 1 0 0 0-1.176 0l-3.37 2.448c-.783.57-1.838-.197-1.539-1.118l1.287-3.962a1 1 0 0 0-.364-1.118L2.06 9.389c-.783-.57-.38-1.81.588-1.81h4.166a1 1 0 0 0 .95-.69l1.286-3.962Z" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-4 w-4 stroke-current"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="M12 21s-6.716-4.344-9.193-8.151C.81 9.764 2.27 5.5 6.172 5.5c2.06 0 3.39 1.064 4.178 2.226C11.137 6.564 12.468 5.5 14.527 5.5c3.902 0 5.363 4.264 3.365 7.349C18.716 16.656 12 21 12 21Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.7"
-      />
-    </svg>
-  );
-}
-
-function DotIcon() {
-  return <span aria-hidden="true" className="text-slate-300">.</span>;
-}
-
-function ListingCard({ item, position }: ListingCardProps) {
-  const meta = LISTING_META_BY_ID[item.id] ?? DEFAULT_META;
+const ListingCard = ({ item, position }: ListingCardProps) => {
+  const meta = LISTING_META_BY_ID[item.id] ?? DEFAULT_LISTING_META;
 
   return (
     <article className="group overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
@@ -181,6 +126,6 @@ function ListingCard({ item, position }: ListingCardProps) {
       </div>
     </article>
   );
-}
+};
 
 export default ListingCard;

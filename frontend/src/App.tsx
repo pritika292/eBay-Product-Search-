@@ -1,7 +1,5 @@
 import SearchPage from './pages/search';
 
-function App() {
-  return <SearchPage />;
-}
+const App = () => <SearchPage />;
 
 export default App;

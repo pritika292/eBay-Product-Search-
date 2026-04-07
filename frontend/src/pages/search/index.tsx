@@ -1,6 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import ListingCard from '../../components/ListingCard';
+import {
+  DEFAULT_FILTER,
+  EMPTY_STATE_MESSAGE,
+  EMPTY_STATE_TITLE,
+  FILTER_OPTIONS,
+  LOAD_MORE_LABEL,
+  LOAD_MORE_LOADING_LABEL,
+  PAGE_SIZE,
+  RESULTS_LABEL,
+  RESULTS_REFRESH_MESSAGE,
+  SEARCH_BUTTON_LABEL,
+  SEARCH_PAGE_DESCRIPTION,
+  SEARCH_PAGE_TITLE,
+  SEARCH_PLACEHOLDER,
+  SHOWING_ALL_RESULTS_LABEL,
+  SKELETON_CARD_COUNT,
+} from '../../constants/search';
 import { fetchSearchResults } from '../../services/search';
 import type {
   SearchFilter,
@@ -8,27 +25,20 @@ import type {
 } from '../../types/search';
 
 type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
-const PAGE_SIZE = 2;
 
-const FILTER_OPTIONS: Array<{ label: string; value: SearchFilter }> = [
-  { label: 'Best match', value: 'relevance' },
-  { label: 'Lowest price', value: 'price_asc' },
-  { label: 'Highest price', value: 'price_desc' },
-];
-
-function SearchPage() {
+const SearchPage = () => {
   const [status, setStatus] = useState<RequestStatus>('idle');
   const [data, setData] = useState<SearchResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<SearchFilter>('relevance');
+  const [activeFilter, setActiveFilter] = useState<SearchFilter>(DEFAULT_FILTER);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadResults() {
+    const loadResults = async () => {
       setStatus('loading');
       setErrorMessage('');
 
@@ -52,7 +62,7 @@ function SearchPage() {
           setStatus('error');
         }
       }
-    }
+    };
 
     loadResults().catch(() => undefined);
 
@@ -61,12 +71,12 @@ function SearchPage() {
     };
   }, [activeFilter, activeQuery]);
 
-  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setActiveQuery(searchInput.trim());
-  }
+  };
 
-  async function handleLoadMore() {
+  const handleLoadMore = async () => {
     if (!data || isFetchingMore || data.items.length >= data.total) {
       return;
     }
@@ -93,13 +103,13 @@ function SearchPage() {
     } finally {
       setIsFetchingMore(false);
     }
-  }
+  };
 
-  function renderContent() {
+  const renderContent = () => {
     if (status === 'loading' && !data) {
       return (
         <div className="grid gap-5">
-          {[0, 1, 2].map((item) => (
+          {Array.from({ length: SKELETON_CARD_COUNT }, (_, item) => item).map((item) => (
             <div
               key={item}
               className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white"
@@ -140,11 +150,10 @@ function SearchPage() {
             No results
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-            Try a different search term
+            {EMPTY_STATE_TITLE}
           </h2>
           <p className="mt-3 text-slate-600">
-            The dummy dataset is small right now, so narrower or different item
-            names may help.
+            {EMPTY_STATE_MESSAGE}
           </p>
         </div>
       );
@@ -158,7 +167,7 @@ function SearchPage() {
       <div className="grid gap-5">
         {status === 'loading' && (
           <p className="text-sm font-medium text-slate-500">
-            Refreshing results...
+            {RESULTS_REFRESH_MESSAGE}
           </p>
         )}
         {data.items.map((item, index) => (
@@ -175,13 +184,13 @@ function SearchPage() {
               }}
               type="button"
             >
-              {isFetchingMore ? 'Loading more...' : 'Show more'}
+              {isFetchingMore ? LOAD_MORE_LOADING_LABEL : LOAD_MORE_LABEL}
             </button>
           </div>
         )}
       </div>
     );
-  }
+  };
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f7f7f6_0%,#f4f1ec_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
@@ -189,11 +198,10 @@ function SearchPage() {
         <div>
           <div className="max-w-3xl">
             <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-              eBay Products
+              {SEARCH_PAGE_TITLE}
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
-              Browse a curated set of results with quick filters, spacious cards,
-              and pricing details inspired by Airbnb&apos;s search experience.
+              {SEARCH_PAGE_DESCRIPTION}
             </p>
           </div>
 
@@ -207,7 +215,7 @@ function SearchPage() {
                   aria-label="Search items"
                   className="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                   onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder="Search headphones, consoles, e-readers..."
+                  placeholder={SEARCH_PLACEHOLDER}
                   type="search"
                   value={searchInput}
                 />
@@ -234,7 +242,7 @@ function SearchPage() {
                 className="inline-flex items-center justify-center rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
                 type="submit"
               >
-                Search
+                {SEARCH_BUTTON_LABEL}
               </button>
             </div>
           </form>
@@ -242,7 +250,7 @@ function SearchPage() {
           <div className="mt-8 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-                Results
+                {RESULTS_LABEL}
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
                 {data?.items.length ?? 0}
@@ -258,7 +266,7 @@ function SearchPage() {
             <p className="text-sm text-slate-500">
               {activeQuery
                 ? `Searching for "${activeQuery}"`
-                : 'Showing all available stays'}
+                : SHOWING_ALL_RESULTS_LABEL}
             </p>
           </div>
 
@@ -267,6 +275,6 @@ function SearchPage() {
       </section>
     </main>
   );
-}
+};
 
 export default SearchPage;
