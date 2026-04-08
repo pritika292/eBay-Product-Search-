@@ -14,14 +14,14 @@ class SearchService:
         self._listing_records = tuple(listing_records)
 
     def search_listings(self, query: SearchQueryDto) -> SearchResponseDto:
-        filtered_items = self._filter_listings(query.search)
+        filtered_items = self._filter_listings(query.q)
         sorted_items = self._sort_listings(filtered_items, query.filter)
         paginated_items = sorted_items[query.offset : query.offset + query.take]
 
         return SearchResponseDto(
             items=[self._serialize_listing(item) for item in paginated_items],
             total=len(sorted_items),
-            search=query.search,
+            q=query.q,
             filter=query.filter,
             take=query.take,
             offset=query.offset,
@@ -61,6 +61,7 @@ class SearchService:
             id=item.id,
             title=item.title,
             price=f"${item.price_amount}",
+            condition=item.condition,
             image=item.image,
             link=item.link,
         )

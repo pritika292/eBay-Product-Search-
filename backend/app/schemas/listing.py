@@ -13,17 +13,18 @@ class ListingItemDto(BaseModel):
     id: str
     title: str
     price: str
+    condition: str
     image: HttpUrl
     link: HttpUrl
 
 
 class SearchQueryDto(BaseModel):
-    search: str | None = Field(default=None, max_length=200)
+    q: str | None = Field(default=None, max_length=200)
     filter: SearchFilter | None = None
     take: int = Field(default=20, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
 
-    @field_validator("search")
+    @field_validator("q")
     @classmethod
     def normalize_search(cls, value: str | None) -> str | None:
         if value is None:
@@ -36,7 +37,7 @@ class SearchQueryDto(BaseModel):
 class SearchResponseDto(BaseModel):
     items: list[ListingItemDto]
     total: int
-    search: str | None = None
+    q: str | None = None
     filter: SearchFilter | None = None
     take: int
     offset: int

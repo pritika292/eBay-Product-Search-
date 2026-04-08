@@ -7,22 +7,22 @@ from app.schemas.listing import SearchFilter, SearchQueryDto
 def test_search_query_uses_expected_defaults() -> None:
     query = SearchQueryDto()
 
-    assert query.search is None
+    assert query.q is None
     assert query.filter is None
     assert query.take == 20
     assert query.offset == 0
 
 
 def test_search_query_trims_search_value() -> None:
-    query = SearchQueryDto(search="  sony headphones  ")
+    query = SearchQueryDto(q="  sony headphones  ")
 
-    assert query.search == "sony headphones"
+    assert query.q == "sony headphones"
 
 
 def test_search_query_converts_blank_search_to_none() -> None:
-    query = SearchQueryDto(search="   ")
+    query = SearchQueryDto(q="   ")
 
-    assert query.search is None
+    assert query.q is None
 
 
 def test_search_query_accepts_valid_filter() -> None:
@@ -38,7 +38,7 @@ def test_search_query_accepts_valid_filter() -> None:
         ({"take": 101}, "take"),
         ({"offset": -1}, "offset"),
         ({"filter": "newest"}, "filter"),
-        ({"search": "x" * 201}, "search"),
+        ({"q": "x" * 201}, "q"),
     ],
 )
 def test_search_query_rejects_invalid_values(

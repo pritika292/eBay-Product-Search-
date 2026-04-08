@@ -1,11 +1,11 @@
-# Airbnb Search Assignment
+# eBay Product Search
 
-This repository contains a React + TypeScript frontend and a FastAPI backend for an Airbnb-style search experience using eBay listing data.
+This repository contains a React + TypeScript frontend and a FastAPI backend for an eBay product search experience with an Airbnb-inspired results interface.
 
 ## Live Demo
 
 - Frontend: https://ebay-products.onrender.com
-- Backend API: https://ebay-search-service.onrender.com/api/search
+- Backend API: https://ebay-search-service.onrender.com/search
 
 ## Structure
 
@@ -14,7 +14,12 @@ This repository contains a React + TypeScript frontend and a FastAPI backend for
 
 ## Current POC
 
-The current proof of concept fetches dummy listing data from `GET /api/search` and renders it in an Airbnb-inspired results UI with search, sort, and load-more behavior.
+The current proof of concept fetches mock listing data from `GET /search?q=` and renders it in an Airbnb-inspired results UI with search, sorting, and incremental loading. The backend currently owns the listing contract, including `condition`, so the frontend only renders API data.
+
+## Runtime Requirements
+
+- Node.js 20+
+- Python 3.11+
 
 ## Run Locally
 
@@ -22,6 +27,7 @@ The current proof of concept fetches dummy listing data from `GET /api/search` a
 
 ```bash
 cd backend
+.venv/bin/pip install -r requirements.txt
 .venv/bin/python -m uvicorn app.main:app --reload
 ```
 
@@ -52,12 +58,13 @@ cd backend
 
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
 The frontend will run on `http://127.0.0.1:5173`.
 
-Vite is configured to proxy `/api/*` requests to the FastAPI backend during local development.
+Vite is configured to proxy `/search`, `/api/*`, and `/health` requests to the FastAPI backend during local development.
 
 If you prefer env-based local configuration, copy the example files and adjust as needed:
 
@@ -71,7 +78,7 @@ cp backend/.env.example backend/.env
 1. Start the backend.
 2. Start the frontend.
 3. Open `http://127.0.0.1:5173`.
-4. Confirm the page shows dummy listing cards returned from `/api/search`.
+4. Confirm the page shows listing cards returned from `/search`.
 
 ## Deploy On Render
 
@@ -93,6 +100,8 @@ Recommended environment variables:
 
 - `PYTHON_VERSION=3.11.4`
 - `CORS_ALLOWED_ORIGINS=https://<your-frontend>.onrender.com`
+- `EBAY_CLIENT_ID=`
+- `EBAY_CLIENT_SECRET=`
 
 Your backend URL will look like:
 
@@ -115,3 +124,15 @@ Required environment variable:
 ### Important note
 
 The local Vite proxy only works in development. In Render, the frontend uses `VITE_API_BASE_URL` to talk to the backend directly.
+
+## Tradeoffs
+
+- The current backend uses curated mock data instead of the live eBay Browse API so the UI, validation, and deployment flow could be completed end to end first.
+- Pagination is implemented client-facing as incremental page fetches against the mock dataset, which keeps the behavior aligned with how the real API integration should work.
+- The backend exposes both `/search` and `/api/search` right now. `/search?q=` is the primary public contract and `/api/search` is kept temporarily for compatibility with the existing internal API prefix.
+
+## Next Steps
+
+- Replace the mock listing source with an eBay Browse API client and adapter layer.
+- Add eBay-specific health checks and upstream failure handling.
+- Expand tests around the future eBay integration boundary, including upstream error scenarios and contract mapping.

@@ -56,7 +56,7 @@ const SearchPage = () => {
   const [activeFilter, setActiveFilter] = useState<SearchFilter>(
     initialSearchPageState.filter,
   );
-  const [visibleCount, setVisibleCount] = useState(DEFAULT_PAGE_SIZE);
+  const [page, setPage] = useState(0);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
@@ -72,24 +72,41 @@ const SearchPage = () => {
   useEffect(() => {
     let ignore = false;
     const abortController = new AbortController();
+    const isFirstPage = page === 0;
 
     const loadResults = async () => {
-      setStatus(REQUEST_STATUS.Loading);
-      setErrorMessage('');
+      if (isFirstPage) {
+        setStatus(REQUEST_STATUS.Loading);
+        setErrorMessage('');
+        setData(null);
+      } else {
+        setIsFetchingMore(true);
+      }
 
       try {
         const results = await fetchSearchResults(
           {
-            search: activeQuery || undefined,
+            q: activeQuery || undefined,
             filter: activeFilter,
-            take: visibleCount,
-            offset: 0,
+            take: DEFAULT_PAGE_SIZE,
+            offset: page * DEFAULT_PAGE_SIZE,
           },
           { signal: abortController.signal },
         );
 
         if (!ignore) {
-          setData(results);
+          setData((currentData) => {
+            if (isFirstPage || !currentData) {
+              return results;
+            }
+
+            return {
+              ...results,
+              items: [...currentData.items, ...results.items],
+              offset: 0,
+              take: currentData.items.length + results.items.length,
+            };
+          });
           setStatus(REQUEST_STATUS.Success);
           setIsFetchingMore(false);
         }
@@ -98,7 +115,7 @@ const SearchPage = () => {
           setErrorMessage(
             error instanceof Error ? error.message : 'Unexpected request error.',
           );
-          setStatus(REQUEST_STATUS.Error);
+          setStatus(isFirstPage ? REQUEST_STATUS.Error : REQUEST_STATUS.Success);
           setIsFetchingMore(false);
         }
       }
@@ -110,7 +127,7 @@ const SearchPage = () => {
       ignore = true;
       abortController.abort();
     };
-  }, [activeFilter, activeQuery, visibleCount]);
+  }, [activeFilter, activeQuery, page]);
 
   useEffect(() => {
     if (
@@ -129,15 +146,7 @@ const SearchPage = () => {
         }
 
         setIsFetchingMore(true);
-        setVisibleCount((currentVisibleCount) => {
-          const nextVisibleCount = currentVisibleCount + DEFAULT_PAGE_SIZE;
-
-          if (!data) {
-            return nextVisibleCount;
-          }
-
-          return Math.min(nextVisibleCount, data.total);
-        });
+        setPage((currentPage) => currentPage + 1);
       },
       {
         rootMargin: '300px 0px',
@@ -158,13 +167,13 @@ const SearchPage = () => {
 
     setSearchInput(nextQuery);
     setActiveQuery(nextQuery);
-    setVisibleCount(DEFAULT_PAGE_SIZE);
+    setPage(0);
     setIsFetchingMore(false);
   };
 
   const handleFilterChange = (nextFilter: SearchFilter) => {
     setActiveFilter(nextFilter);
-    setVisibleCount(DEFAULT_PAGE_SIZE);
+    setPage(0);
     setIsFetchingMore(false);
   };
 
@@ -174,13 +183,7 @@ const SearchPage = () => {
     }
 
     setIsFetchingMore(true);
-    setVisibleCount((currentVisibleCount) => {
-      if (!data) {
-        return currentVisibleCount + DEFAULT_PAGE_SIZE;
-      }
-
-      return Math.min(currentVisibleCount + DEFAULT_PAGE_SIZE, data.total);
-    });
+    setPage((currentPage) => currentPage + 1);
   };
 
   const renderContent = () => {
