@@ -31,7 +31,21 @@ To lint the backend:
 
 ```bash
 cd backend
-.venv/bin/ruff check app
+.venv/bin/ruff check app tests
+```
+
+To run the backend tests:
+
+```bash
+cd backend
+.venv/bin/pytest
+```
+
+To check backend test coverage:
+
+```bash
+cd backend
+.venv/bin/pytest --cov=app --cov-report=term-missing
 ```
 
 ### Frontend
