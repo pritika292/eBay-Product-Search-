@@ -1,21 +1,25 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 
 import ListingCard from '../../components/ListingCard';
 import {
-  DEFAULT_FILTER,
+  DEFAULT_PAGE_SIZE,
   EMPTY_STATE_MESSAGE,
   EMPTY_STATE_TITLE,
   FILTER_OPTIONS,
   LOAD_MORE_LABEL,
   LOAD_MORE_LOADING_LABEL,
-  PAGE_SIZE,
+  LOAD_MORE_STATUS_LABEL,
   RESULTS_LABEL,
   RESULTS_REFRESH_MESSAGE,
   SEARCH_BUTTON_LABEL,
   SEARCH_PAGE_DESCRIPTION,
   SEARCH_PAGE_TITLE,
   SEARCH_PLACEHOLDER,
-  SHOWING_ALL_RESULTS_LABEL,
   SKELETON_CARD_COUNT,
 } from '../../constants/search';
 import { fetchSearchResults } from '../../services/search';
@@ -23,43 +27,79 @@ import type {
   SearchFilter,
   SearchResponse,
 } from '../../types/search';
+import {
+  getInitialSearchPageState,
+  syncSearchPageStateToUrl,
+} from './searchParams';
 
-type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
+const REQUEST_STATUS = {
+  Idle: 'idle',
+  Loading: 'loading',
+  Success: 'success',
+  Error: 'error',
+} as const;
+
+type RequestStatus = (typeof REQUEST_STATUS)[keyof typeof REQUEST_STATUS];
+
+const initialSearchPageState = getInitialSearchPageState();
 
 const SearchPage = () => {
-  const [status, setStatus] = useState<RequestStatus>('idle');
+  const [status, setStatus] = useState<RequestStatus>(REQUEST_STATUS.Idle);
   const [data, setData] = useState<SearchResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [activeQuery, setActiveQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<SearchFilter>(DEFAULT_FILTER);
+  const [searchInput, setSearchInput] = useState(
+    initialSearchPageState.searchQuery,
+  );
+  const [activeQuery, setActiveQuery] = useState(
+    initialSearchPageState.searchQuery,
+  );
+  const [activeFilter, setActiveFilter] = useState<SearchFilter>(
+    initialSearchPageState.filter,
+  );
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_PAGE_SIZE);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+  const hasMoreProducts = Boolean(data && data.items.length < data.total);
+
+  useEffect(() => {
+    syncSearchPageStateToUrl({
+      filter: activeFilter,
+      searchQuery: activeQuery,
+    });
+  }, [activeFilter, activeQuery]);
 
   useEffect(() => {
     let ignore = false;
+    const abortController = new AbortController();
 
     const loadResults = async () => {
-      setStatus('loading');
+      setStatus(REQUEST_STATUS.Loading);
       setErrorMessage('');
 
       try {
-        const results = await fetchSearchResults({
-          search: activeQuery || undefined,
-          filter: activeFilter,
-          take: PAGE_SIZE,
-          offset: 0,
-        });
+        const results = await fetchSearchResults(
+          {
+            search: activeQuery || undefined,
+            filter: activeFilter,
+            take: visibleCount,
+            offset: 0,
+          },
+          { signal: abortController.signal },
+        );
 
         if (!ignore) {
           setData(results);
-          setStatus('success');
+          setStatus(REQUEST_STATUS.Success);
+          setIsFetchingMore(false);
         }
       } catch (error) {
-        if (!ignore) {
+        if (!ignore && !abortController.signal.aborted) {
           setErrorMessage(
             error instanceof Error ? error.message : 'Unexpected request error.',
           );
-          setStatus('error');
+          setStatus(REQUEST_STATUS.Error);
+          setIsFetchingMore(false);
         }
       }
     };
@@ -68,48 +108,89 @@ const SearchPage = () => {
 
     return () => {
       ignore = true;
+      abortController.abort();
     };
-  }, [activeFilter, activeQuery]);
+  }, [activeFilter, activeQuery, visibleCount]);
+
+  useEffect(() => {
+    if (
+      !hasMoreProducts
+      || isFetchingMore
+      || status !== REQUEST_STATUS.Success
+      || !loadMoreTriggerRef.current
+    ) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) {
+          return;
+        }
+
+        setIsFetchingMore(true);
+        setVisibleCount((currentVisibleCount) => {
+          const nextVisibleCount = currentVisibleCount + DEFAULT_PAGE_SIZE;
+
+          if (!data) {
+            return nextVisibleCount;
+          }
+
+          return Math.min(nextVisibleCount, data.total);
+        });
+      },
+      {
+        rootMargin: '300px 0px',
+      },
+    );
+
+    observer.observe(loadMoreTriggerRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [data, hasMoreProducts, isFetchingMore, status]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setActiveQuery(searchInput.trim());
+
+    const nextQuery = searchInput.trim();
+
+    setSearchInput(nextQuery);
+    setActiveQuery(nextQuery);
+    setVisibleCount(DEFAULT_PAGE_SIZE);
+    setIsFetchingMore(false);
   };
 
-  const handleLoadMore = async () => {
-    if (!data || isFetchingMore || data.items.length >= data.total) {
+  const handleFilterChange = (nextFilter: SearchFilter) => {
+    setActiveFilter(nextFilter);
+    setVisibleCount(DEFAULT_PAGE_SIZE);
+    setIsFetchingMore(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMoreProducts || isFetchingMore) {
       return;
     }
 
     setIsFetchingMore(true);
+    setVisibleCount((currentVisibleCount) => {
+      if (!data) {
+        return currentVisibleCount + DEFAULT_PAGE_SIZE;
+      }
 
-    try {
-      const nextPage = await fetchSearchResults({
-        search: activeQuery || undefined,
-        filter: activeFilter,
-        take: PAGE_SIZE,
-        offset: data.items.length,
-      });
-
-      setData({
-        ...nextPage,
-        items: [...data.items, ...nextPage.items],
-      });
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Unexpected request error.',
-      );
-      setStatus('error');
-    } finally {
-      setIsFetchingMore(false);
-    }
+      return Math.min(currentVisibleCount + DEFAULT_PAGE_SIZE, data.total);
+    });
   };
 
   const renderContent = () => {
-    if (status === 'loading' && !data) {
+    if (status === REQUEST_STATUS.Loading && !data) {
       return (
         <div className="grid gap-5">
-          {Array.from({ length: SKELETON_CARD_COUNT }, (_, item) => item).map((item) => (
+          {Array.from(
+            { length: SKELETON_CARD_COUNT },
+            (_, item) => item,
+          ).map((item) => (
             <div
               key={item}
               className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white"
@@ -132,7 +213,7 @@ const SearchPage = () => {
       );
     }
 
-    if (status === 'error') {
+    if (!data && status === REQUEST_STATUS.Error) {
       return (
         <div className="rounded-[1.75rem] border border-rose-100 bg-rose-50 p-6 text-rose-900">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-rose-500">
@@ -143,7 +224,7 @@ const SearchPage = () => {
       );
     }
 
-    if (status === 'success' && data?.items.length === 0) {
+    if (status === REQUEST_STATUS.Success && data?.items.length === 0) {
       return (
         <div className="rounded-[1.75rem] border border-slate-200 bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -165,23 +246,36 @@ const SearchPage = () => {
 
     return (
       <div className="grid gap-5">
-        {status === 'loading' && (
+        {status === REQUEST_STATUS.Loading && (
           <p className="text-sm font-medium text-slate-500">
             {RESULTS_REFRESH_MESSAGE}
           </p>
         )}
-        {data.items.map((item, index) => (
-          <ListingCard key={item.id} item={item} position={index + 1} />
+
+        {status === REQUEST_STATUS.Error && (
+          <div className="rounded-[1.5rem] border border-rose-100 bg-rose-50 p-5 text-sm text-rose-900">
+            {errorMessage}
+          </div>
+        )}
+
+        {data.items.map((item) => (
+          <ListingCard key={item.id} item={item} />
         ))}
 
-        {data.items.length < data.total && (
-          <div className="flex justify-center pt-2">
+        {hasMoreProducts && (
+          <div className="flex flex-col items-center gap-4 pt-2">
+            <div
+              ref={loadMoreTriggerRef}
+              aria-hidden="true"
+              className="h-2 w-full"
+            />
+            <p className="text-sm text-slate-500">
+              {LOAD_MORE_STATUS_LABEL}
+            </p>
             <button
               className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isFetchingMore}
-              onClick={() => {
-                handleLoadMore().catch(() => undefined);
-              }}
+              onClick={handleLoadMore}
               type="button"
             >
               {isFetchingMore ? LOAD_MORE_LOADING_LABEL : LOAD_MORE_LABEL}
@@ -209,7 +303,7 @@ const SearchPage = () => {
             className="mt-8 rounded-[1.75rem] border border-slate-200 bg-stone-50 p-3 shadow-sm"
             onSubmit={handleSearchSubmit}
           >
-            <div className="flex flex-col gap-3 lg:flex-row">
+            <div className="flex flex-col gap-3 xl:flex-row">
               <div className="flex-1">
                 <input
                   aria-label="Search items"
@@ -221,12 +315,12 @@ const SearchPage = () => {
                 />
               </div>
 
-              <div className="lg:w-52">
+              <div className="xl:w-52">
                 <select
                   aria-label="Sort items"
                   className="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-base text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                   onChange={(event) => {
-                    setActiveFilter(event.target.value as SearchFilter);
+                    handleFilterChange(event.target.value as SearchFilter);
                   }}
                   value={activeFilter}
                 >
@@ -247,27 +341,15 @@ const SearchPage = () => {
             </div>
           </form>
 
-          <div className="mt-8 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-                {RESULTS_LABEL}
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                {data?.items.length ?? 0}
-                {' '}
-                of
-                {' '}
-                {data?.total ?? 0}
-                {' '}
-                products
-              </h2>
-            </div>
-
-            <p className="text-sm text-slate-500">
-              {activeQuery
-                ? `Searching for "${activeQuery}"`
-                : SHOWING_ALL_RESULTS_LABEL}
+          <div className="mt-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {RESULTS_LABEL}
             </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+              {data?.total ?? 0}
+              {' '}
+              items
+            </h2>
           </div>
 
           <div className="mt-6">{renderContent()}</div>

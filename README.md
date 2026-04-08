@@ -1,6 +1,6 @@
 # Airbnb Search Assignment
 
-This repository contains a React + TypeScript frontend and a FastAPI backend for an Airbnb-style search experience using dummy eBay-style listing data.
+This repository contains a React + TypeScript frontend and a FastAPI backend for an Airbnb-style search experience using eBay listing data.
 
 ## Live Demo
 
@@ -11,7 +11,6 @@ This repository contains a React + TypeScript frontend and a FastAPI backend for
 
 - `frontend/` - React + TypeScript + Vite app
 - `backend/` - FastAPI app
-- `project-execution-checklist.txt` - planning notes and implementation checklist
 
 ## Current POC
 
@@ -27,6 +26,13 @@ cd backend
 ```
 
 The backend will run on `http://127.0.0.1:8000`.
+
+To lint the backend:
+
+```bash
+cd backend
+.venv/bin/ruff check app
+```
 
 ### Frontend
 
